@@ -7,6 +7,7 @@ To run this project locally, you will need:
 1. Trivy - Click [here](/Trivy.md) for a detailed guide.
 2. A GitHub Account - [GitHub Login](https://github.com/login)
 3. Docker Desktop - [Windows Install](https://docs.docker.com/desktop/setup/install/windows-install/) | [MacOs Install](https://docs.docker.com/desktop/setup/install/mac-install/)
+4. Node is needed to run NPM commands like `npm install` and `npm run dev`
 
 **PS**: Podman Desktop also works as an alternativ to Docker Desktop.
 
