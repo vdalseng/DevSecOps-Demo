@@ -1,4 +1,4 @@
-name: Build Docker Image
+name: Build and Security Scan
 
 on:
   push:
@@ -30,4 +30,76 @@ jobs:
           name: mydemoapp-image
           path: mydemoapp.tar
           retention-days: 1
-        
+
+  trivy-scan:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: mydemoapp-image
+          path: .
+
+      - name: Load Docker image
+        run: docker load -i mydemoapp.tar
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install wget -y
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.65.0/trivy_0.65.0_Linux-64bit.deb
+          sudo dpkg -i trivy_0.65.0_Linux-64bit.deb
+
+      - name: Run Trivy vulnerability scanner
+        run: |
+          trivy image --format json --output trivy-report.json mydemoapp:latest
+          trivy image --format table mydemoapp:latest
+
+      - name: Upload Trivy scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-scan-results
+          path: trivy-report.json
+          retention-days: 1
+
+  owasp-zap-scan:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: mydemoapp-image
+          path: .
+
+      - name: Load and run Docker image
+        run: |
+          docker load -i mydemoapp.tar
+          docker run -d -p 5173:5173 --name test-app mydemoapp:latest
+          sleep 10
+
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'http://localhost:5173'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+
+      - name: Upload ZAP scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: owasp-zap-report
+          path: |
+            baseline.html
+            baseline.json
+            baseline.xml
+          retention-days: 1
+
+      - name: Stop Docker container
+        run: docker stop test-app
+        if: always()
