@@ -5,9 +5,11 @@ FROM node:latest
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY package.json package-lock.json* ./
-RUN npm install
-
+COPY package.json package-lock.json ./
+RUN rm -rf node_modules package-lock.json && \
+    npm install && \
+    npm install
+    
 # Copy all source files
 COPY . .
 
