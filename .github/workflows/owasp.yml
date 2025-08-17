@@ -1,0 +1,54 @@
+name: OWASP ZAP Scan
+
+on:
+  workflow_run:
+    workflows: ["CI - Build and Scan"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  zap-scan:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: mydemoapp-image
+          path: .
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Load and run Docker image
+        run: |
+          docker load -i mydemoapp.tar
+          docker run -d -p 3000:3000 --name test-app mydemoapp:latest
+          sleep 10
+
+      - name: Wait for application to be ready
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:3000; do sleep 2; done'
+
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target: 'http://localhost:3000'
+          cmd_options: '-a'
+          allow_issue_writing: false  # Prevents ZAP from creating GitHub issues
+
+      - name: Upload ZAP scan results
+        uses: actions/upload-artifact@v4
+        # Upload results even if scan fails
+        if: always()
+        with:
+          name: zap-report
+          path: |
+            baseline.html
+            baseline.json
+            baseline.xml
+          retention-days: 1

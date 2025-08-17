@@ -1,0 +1,32 @@
+name: Build Docker Image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: docker build -t mydemoapp:latest .
+        working-directory: ./MyDemoApp
+
+      - name: Save Docker image as artifact
+        run: docker save mydemoapp:latest -o mydemoapp.tar
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: mydemoapp-image
+          path: mydemoapp.tar
+          retention-days: 1
+        
