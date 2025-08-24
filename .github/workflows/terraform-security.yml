@@ -1,0 +1,41 @@
+name: Terraform Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+
+jobs:
+  terraform-security-scan:
+    runs-on: ubuntu-latest
+    name: Scan Terraform for Misconfigurations and Secrets
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install wget -y
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.65.0/trivy_0.65.0_Linux-64bit.deb
+          sudo dpkg -i trivy_0.65.0_Linux-64bit.deb
+
+      - name: Run Trivy scan on Terraform folder
+        run: |
+          trivy fs --scanners misconfig,secret --include-dev-deps --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL --ignore-unfixed=false --format table --skip-files '**/*.zip,**/*.tar,**/*.gz,**/*.7z,**/*.rar,**/*.exe,**/*.bin,**/*.deb,**/*.rpm' ./terraform
+
+      - name: Generate JSON report
+        if: always()
+        run: |
+          trivy fs --scanners misconfig,secret --include-dev-deps --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL --ignore-unfixed=false --format json --output trivy-terraform-report.json --skip-files '**/*.zip,**/*.tar,**/*.gz,**/*.7z,**/*.rar,**/*.exe,**/*.bin,**/*.deb,**/*.rpm' ./terraform
+
+      - name: Upload Trivy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-terraform-report
+          path: trivy-terraform-report.json
+          retention-days: 1
