@@ -1,10 +1,23 @@
 import psycopg2
 from psycopg2 import errors
 import datetime
+import os
+
+DATABASE_HOST = "localhost"
+DATABASE_NAME = "SummerProjectDB"
+DATABASE_USER = "postgres"
+DATABASE_PASSWORD = "Qwerty123" 
+DATABASE_PORT = 5432
 
 def connectToDatabase():
     try:
-        connection = psycopg2.connect(host="localhost", dbname="SummerProjectDB", user="postgres", password="Qwerty123", port=5432)
+        connection = psycopg2.connect(
+            host=DATABASE_HOST,
+            dbname=DATABASE_NAME,
+            user=DATABASE_USER,
+            password=DATABASE_PASSWORD,
+            port=DATABASE_PORT
+        )
         print(f"Connected to database at {datetime.datetime.now()}")
         return connection
     except errors.ConnectionException as error:
@@ -61,6 +74,36 @@ def createTable(connection):
         print(f"Operational error: {error}")
     except Exception as error:
         print(f"An unexpected error occurred: {error}")
+
+def userLookup(connection, user_input):
+    try:
+        with connection:
+            with connection.cursor() as cursor:
+                query = f"SELECT * FROM SomeTable WHERE name = '{user_input}'"
+                cursor.execute(query)
+                results = cursor.fetchall()
+                return results
+    except Exception as error:
+        print(f"Database error: {error}")
+        return None
+
+def login(connection, username, password):
+
+    try:
+        with connection:
+            with connection.cursor() as cursor:
+                query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
+                cursor.execute(query)
+                user = cursor.fetchone()
+                if user:
+                    print("Login successful!")
+                    return True
+                else:
+                    print("Invalid credentials")
+                    return False
+    except Exception as error:
+        print(f"Login error: {error}")
+        return False
 
 def main():
     connection = None
