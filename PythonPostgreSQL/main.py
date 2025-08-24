@@ -1,7 +1,7 @@
 import psycopg2
 from psycopg2 import errors
 import datetime
-import os
+
 
 DATABASE_HOST = "localhost"
 DATABASE_NAME = "SummerProjectDB"
