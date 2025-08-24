@@ -1,0 +1,42 @@
+# EXAMPLE TERRAFORM VARIABLES FILE
+# SECURITY ISSUE: Contains sensitive information that should not be in version control
+
+# Basic configuration
+resource_group_name   = "demo-insecure-rg"
+location             = "East US"
+storage_account_name = "insecurestorage123"
+environment          = "demo"
+
+# SECURITY ISSUE: Weak password in plain text
+admin_password = "Password123!"
+
+# SECURITY ISSUE: Allowing all IP addresses
+allowed_ips = ["0.0.0.0/0"]
+
+# SECURITY ISSUE: Insecure defaults
+enable_logging        = false
+backup_retention_days = 1
+public_access_enabled = true
+https_only           = false
+
+# SECURITY ISSUE: No governance tags
+tags = {}
+
+# Additional insecure examples:
+# SECURITY ISSUE: Hardcoded secrets
+database_connection_string = "Server=tcp:myserver.database.windows.net,1433;Database=mydatabase;User ID=myusername;Password=mypassword123;Encrypt=true;TrustServerCertificate=false;Connection Timeout=30;"
+
+# SECURITY ISSUE: API keys in plain text
+api_key = "sk-1234567890abcdef1234567890abcdef"
+
+# SECURITY ISSUE: Service principal credentials
+client_id     = "12345678-1234-1234-1234-123456789012"
+client_secret = "my-super-secret-password"
+tenant_id     = "87654321-4321-4321-4321-210987654321"
+
+# SECURITY ISSUE: SSH private key content
+ssh_private_key = <<EOF
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA... (truncated for brevity)
+-----END RSA PRIVATE KEY-----
+EOF
