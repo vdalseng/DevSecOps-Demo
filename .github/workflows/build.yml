@@ -53,8 +53,8 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         run: |
-          trivy image --format json --output trivy-report.json mydemoapp:latest
-          trivy image --format table mydemoapp:latest
+          trivy image --format json --output trivy-report.json --skip-files '**/.npm/**,**/node_modules/**/.cache/**,**/.cache/**,**/cache/**,**/*.tar,**/*.zip,**/*.gz' mydemoapp:latest
+          trivy image --format table --skip-files '**/.npm/**,**/node_modules/**/.cache/**,**/.cache/**,**/cache/**,**/*.tar,**/*.zip,**/*.gz' mydemoapp:latest
 
       - name: Upload Trivy scan results
         uses: actions/upload-artifact@v4
