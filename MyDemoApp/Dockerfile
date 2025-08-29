@@ -1,5 +1,5 @@
-FROM node:latest
-#FROM node:24-alpine
+#FROM node:latest
+FROM node:24-alpine
 
 # Set working directory
 WORKDIR /app
