@@ -76,8 +76,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y podman
-      - name: Load Podman image
-        run: podman load -i ${{ env.IMAGE_NAME }}.tar
 
       - name: Install Trivy
         run: |
@@ -88,8 +86,8 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         run: |
-          trivy image --format json --output trivy-report.json --skip-files '**/.npm/**,**/node_modules/**/.cache/**,**/.cache/**,**/cache/**,**/*.tar,**/*.zip,**/*.gz' ${{ env.IMAGE_NAME }}:latest
-          trivy image --format table --skip-files '**/.npm/**,**/node_modules/**/.cache/**,**/.cache/**,**/cache/**,**/*.tar,**/*.zip,**/*.gz' ${{ env.IMAGE_NAME }}:latest
+          trivy image --format json --output trivy-report.json --skip-files '**/.npm/**,**/node_modules/**/.cache/**,**/.cache/**,**/cache/**,**/*.tar,**/*.zip,**/*.gz' --input ${{ env.IMAGE_NAME }}:latest
+          trivy image --format table --skip-files '**/.npm/**,**/node_modules/**/.cache/**,**/.cache/**,**/cache/**,**/*.tar,**/*.zip,**/*.gz' --input ${{ env.IMAGE_NAME }}:latest
 
       - name: Upload Trivy scan results
         uses: actions/upload-artifact@v4
@@ -113,20 +111,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y podman
 
-      - name: Load MinimalAPI image
-        run: podman load -i ${{ env.API_IMAGE_NAME }}.tar
-
       - name: Install Trivy
         run: |
           sudo apt-get update
           sudo apt-get install wget -y
-          wget https://github.com/aquasecurity/trivy/releases/download/${{ env.TRIVY_VERSION }}/trivy_0.65.0_Linux-64bit.deb
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.65.0/trivy_0.65.0_Linux-64bit.deb
           sudo dpkg -i trivy_0.65.0_Linux-64bit.deb
 
       - name: Run Trivy vulnerability scanner on API
         run: |
-          trivy image --format json --output trivy-api-report.json ${{ env.API_IMAGE_NAME }}:latest
-          trivy image --format table ${{ env.API_IMAGE_NAME }}:latest
+          trivy image --format json --output trivy-api-report.json --input ${{ env.API_IMAGE_NAME }}:latest
+          trivy image --format table --input ${{ env.API_IMAGE_NAME }}:latest
 
       - name: Upload Trivy API scan results
         uses: actions/upload-artifact@v4
