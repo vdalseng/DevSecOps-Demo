@@ -1,167 +1,103 @@
-# Intentionally Misconfigured Terraform Azure Setup
+# 🌐 Azure VNet Module with Auto-Discovery Private DNS
 
-⚠️ **WARNING: This is an intentionally insecure Terraform configuration for educational and demonstration purposes. DO NOT use this in production environments.**
+A comprehensive, out-of-the-box Terraform module for creating Azure Virtual Networks with subnets, private endpoints, and automatically configured Private DNS zones.
 
-## Overview
+## ✨ Features
 
-This directory contains a deliberately misconfigured Terraform module for Azure Resource Manager (AzureRM) that demonstrates common security vulnerabilities and misconfigurations found in infrastructure-as-code deployments.
+- **🔄 Auto-Discovery**: Automatically discovers and creates required Private DNS zones based on private endpoint subresource types
+- **📋 Comprehensive Lookup**: Uses `azure_private_link_zones.tf` as the authoritative source for Azure service DNS mappings
+- **�️ Private by Default**: Creates private endpoints with automatic DNS resolution
+- **🏗️ Flexible Architecture**: Supports both private networking and controlled public access at the resource level
+- **🎯 Zero Configuration DNS**: No need to manually specify DNS zone names - they're discovered automatically
+- **🔗 Resource Group Scoped**: All resources created within a single resource group for simplified management
 
-## Security Issues Demonstrated
+## 🚀 Quick Start
 
-### 1. Provider Configuration Issues
-- No subscription_id or tenant_id specified
-- Using default authentication methods
-- Outdated provider versions with known vulnerabilities
+### Basic Usage
 
-### 2. Storage Account Misconfigurations
-- ❌ Public network access enabled
-- ❌ HTTPS traffic not enforced
-- ❌ Using older TLS versions (TLS 1.0)
-- ❌ Infrastructure encryption disabled
-- ❌ No customer-managed keys
-- ❌ Blob versioning disabled
-- ❌ Very short retention periods (1 day)
-- ❌ Public container access enabled
+```hcl
+module "vnet_example" {
+  source = "./modules/terraform-azurerm-virtualnetwork"
 
-### 3. Network Security Issues
-- ❌ Network Security Group allows all traffic (0.0.0.0/0)
-- ❌ No network access restrictions
-- ❌ Overly permissive firewall rules
+  vnet_canonical_name = "example-vnet"
+  system_name         = "myapp"
+  environment         = "dev"
+  resource_group      = azurerm_resource_group.example
 
-### 4. Database Security Problems
-- ❌ SQL authentication with weak passwords
-- ❌ Hardcoded passwords in configuration
-- ❌ Public network access enabled
-- ❌ No threat detection policy
-- ❌ No transparent data encryption
-- ❌ No backup configuration
+  address_space = ["10.0.0.0/23"]
 
-### 5. Key Vault Misconfigurations
-- ❌ Using standard tier instead of premium
-- ❌ Soft delete disabled
-- ❌ Purge protection disabled
-- ❌ Public network access enabled
-- ❌ Overly permissive access policies
+  subnet_configs = {
+    workloads = "10.0.0.0/24"
+    endpoints = "10.0.1.0/24"
+  }
 
-### 6. Secrets Management Issues
-- ❌ Sensitive outputs not marked as sensitive
-- ❌ Access keys exposed in outputs
-- ❌ Connection strings in plain text
-- ❌ Admin credentials exposed
-- ❌ Hardcoded secrets in variables
-
-### 7. State Management Problems
-- ❌ No remote backend configured
-- ❌ State file stored locally with sensitive data
-- ❌ No state encryption
-
-### 8. Governance and Compliance Issues
-- ❌ No resource tagging for governance
-- ❌ No cost center or ownership tags
-- ❌ No environment classification
-- ❌ No naming convention validation
-
-### 9. Monitoring and Logging
-- ❌ Diagnostic logging disabled by default
-- ❌ No monitoring configuration
-- ❌ No alerting setup
-- ❌ No audit trail configuration
-
-### 10. Version Management
-- ❌ No minimum Terraform version specified
-- ❌ Using outdated provider versions
-- ❌ No version pinning for dependencies
-
-## Files Structure
-
-```
-terraform/
-├── main.tf                           # Example usage with security issues
-├── terraform.tfvars.example         # Insecure variable examples
-└── modules/
-    └── terraform-azurerm-storageaccount/
-        ├── main.tf                   # Main resource definitions with vulnerabilities
-        ├── variables.tf              # Variables with insecure defaults
-        ├── outputs.tf               # Outputs exposing sensitive information
-        └── versions.tf              # Outdated version constraints
+  private_endpoint_configs = {
+    storage_blob = {
+      subnet_name       = "endpoints"
+      resource_id       = azurerm_storage_account.example.id
+      subresource_names = ["blob"]  # Auto-discovers privatelink.blob.core.windows.net
+    }
+  }
+}
 ```
 
-## Common Terraform Security Best Practices (NOT followed here)
+## 🎯 Example: Storage Account with Private Endpoint
 
-### ✅ What SHOULD be done instead:
+The included `main.tf` demonstrates a complete example:
 
-1. **Provider Security**
-   - Pin provider versions to specific, up-to-date versions
-   - Use managed identity or service principals with minimal permissions
-   - Specify subscription_id and tenant_id explicitly
+```hcl
+# Creates a VNet with workloads and endpoints subnets
+module "vnet_a" {
+  source = "./modules/terraform-azurerm-virtualnetwork"
 
-2. **Storage Security**
-   - Enable HTTPS traffic only
-   - Use minimum TLS 1.2
-   - Enable infrastructure encryption
-   - Use customer-managed keys
-   - Configure proper network access rules
-   - Enable logging and monitoring
+  vnet_canonical_name = "demo-net-a"
+  system_name         = "demo"
+  environment         = "dev"
+  resource_group      = azurerm_resource_group.network
 
-3. **Network Security**
-   - Implement least-privilege network access
-   - Use specific IP ranges instead of 0.0.0.0/0
-   - Configure proper NSG rules
+  address_space = ["10.133.100.0/23"]
 
-4. **Secrets Management**
-   - Mark sensitive outputs as sensitive
-   - Use Azure Key Vault for secrets
-   - Never hardcode credentials
-   - Use managed identities where possible
+  subnet_configs = {
+    workloads = "10.133.100.0/24"   # 254 IPs for workloads
+    endpoints = "10.133.101.0/24"   # 254 IPs for private endpoints
+  }
 
-5. **State Management**
-   - Use remote backend (Azure Storage with encryption)
-   - Enable state locking
-   - Restrict access to state files
-
-6. **Governance**
-   - Implement consistent tagging strategy
-   - Use naming conventions
-   - Add resource validation rules
-
-## How to Use This Demo
-
-This configuration is designed to be scanned by security tools like:
-- Terraform security scanners (tfsec, Checkov, Terrascan)
-- Azure Security Center
-- Custom policy engines
-
-### Example Commands
-
-```bash
-# Initialize Terraform (will show version warnings)
-terraform init
-
-# Plan deployment (will show security warnings if tools are configured)
-terraform plan
-
-# Run security scan with tfsec
-tfsec .
-
-# Run security scan with Checkov
-checkov -f main.tf
+  private_endpoint_configs = {
+    storage_blob = {
+      subnet_name       = "endpoints"
+      resource_id       = azurerm_storage_account.example.id
+      subresource_names = ["blob"]
+      # DNS zone "privatelink.blob.core.windows.net" created automatically!
+    }
+  }
+}
 ```
 
-## Educational Value
+## 🔍 Auto-Discovery in Action
 
-This misconfigured setup helps demonstrate:
-- How easy it is to accidentally introduce security vulnerabilities
-- The importance of security scanning in CI/CD pipelines
-- Common misconfigurations found in real-world deployments
-- The need for security policies and governance frameworks
+1. **Subresource Detection**: Module detects `["blob"]` in the private endpoint config
+2. **DNS Lookup**: Searches `azure_private_link_zones.tf` for the blob service
+3. **Zone Creation**: Automatically creates `privatelink.blob.core.windows.net`
+4. **VNet Linking**: Links the VNet to the DNS zone
+5. **Endpoint Integration**: Configures private endpoint to use the DNS zone
 
-## Remediation Examples
+## � Getting Started
 
-For each security issue identified, you should:
-1. Update the configuration to follow security best practices
-2. Implement proper access controls
-3. Enable monitoring and logging
-4. Use infrastructure scanning tools
-5. Implement policy-as-code frameworks
+1. **Clone or copy** the module to your project
+2. **Configure** your `terraform.tfvars`:
+   ```hcl
+   system_name = "myapp"
+   environment = "dev"
+   location = "Norway East"
+   vnet_a_address_space = "10.0.0.0/23"
+   ```
+3. **Deploy** with standard Terraform commands:
+   ```bash
+   terraform init
+   terraform plan
+   terraform apply
+   ```
 
-Remember: **Security is a shared responsibility** - infrastructure code should be treated with the same security rigor as application code.
+---
+
+**Ready to deploy secure, private Azure networking with zero DNS configuration hassle? This module has you covered! 🚀**
