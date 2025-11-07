@@ -1,57 +1,50 @@
-# EXAMPLE USAGE OF MISCONFIGURED TERRAFORM MODULE
-# This demonstrates how the insecure module might be used
+resource "random_string" "suffix" {
+  length  = 4
+  special = false
+  upper   = false
+}
 
-terraform {
-  required_version = ">= 1.0"
+resource "azurerm_resource_group" "network" {
+  name     = "rg-${var.system_name}-network-${var.environment}-${random_string.suffix.result}"
+  location = var.location
+}
+
+resource "azurerm_storage_account" "example" {
+  name                     = "sa${var.system_name}${var.environment}${random_string.suffix.result}"
+  resource_group_name      = azurerm_resource_group.network.name
+  location                 = azurerm_resource_group.network.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
   
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 3.0"
+  public_network_access_enabled = false
+}
+
+module "vnet_a" {
+  source = "./modules/terraform-azurerm-virtualnetwork"
+
+  vnet_canonical_name = "${var.system_name}-net-a"
+  system_name         = var.system_name
+  environment         = var.environment
+  resource_group      = azurerm_resource_group.network
+
+  address_space = [var.vnet_a_address_space]
+
+  subnet_configs = {
+    workloads = cidrsubnet(var.vnet_a_address_space, 2, 0)
+    endpoints = cidrsubnet(var.vnet_a_address_space, 2, 1)
+  }
+
+  nsg_attached_subnets = []
+  nsg_rules = {}
+
+  # Create DNS zones and auto-discover from azure_private_link_zones.tf
+  create_dns_zones = true
+
+  private_endpoint_configs = {
+    storage_blob = {
+      subnet_name       = "endpoints"
+      resource_id       = azurerm_storage_account.example.id
+      subresource_names = ["blob"]
     }
   }
 }
-
-provider "azurerm" {
-  features {}
-  # SECURITY ISSUE: No subscription_id, tenant_id specified
-  # SECURITY ISSUE: Using default authentication which might use service principal
-}
-
-# Using the misconfigured storage account module
-module "insecure_storage" {
-  source = "./modules/terraform-azurerm-storageaccount"
-  
-  resource_group_name    = "demo-insecure-rg"
-  location              = "East US"
-  storage_account_name  = "insecurestorage123"
-  environment           = "demo"
-  
-  # SECURITY ISSUE: Using insecure defaults
-  admin_password         = "WeakPassword123!"
-  allowed_ips           = ["0.0.0.0/0"]  # Allow all IPs
-  enable_logging        = false
-  backup_retention_days = 1
-  public_access_enabled = true
-  https_only           = false
-  
-  # SECURITY ISSUE: No tags for governance
-  tags = {}
-}
-
-# SECURITY ISSUE: Outputting sensitive information
-output "storage_keys" {
-  value = {
-    primary   = module.insecure_storage.storage_account_primary_access_key
-    secondary = module.insecure_storage.storage_account_secondary_access_key
-  }
-  # SECURITY ISSUE: Not marked as sensitive
-}
-
-output "connection_string" {
-  value = module.insecure_storage.storage_account_primary_connection_string
-  # SECURITY ISSUE: Not marked as sensitive
-}
-
-# SECURITY ISSUE: Local state file (no remote backend configured)
-# The terraform.tfstate file will contain all sensitive values in plain text
