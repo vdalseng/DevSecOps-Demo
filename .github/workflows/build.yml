@@ -86,8 +86,8 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         run: |
-          trivy image --format json --output trivy-report.json --skip-files '**/.npm/**,**/node_modules/**/.cache/**,**/.cache/**,**/cache/**,**/*.tar,**/*.zip,**/*.gz' --input ${{ env.IMAGE_NAME }}:latest
-          trivy image --format table --skip-files '**/.npm/**,**/node_modules/**/.cache/**,**/.cache/**,**/cache/**,**/*.tar,**/*.zip,**/*.gz' --input ${{ env.IMAGE_NAME }}:latest
+          trivy image --format json --output trivy-report.json --skip-files '**/.npm/**,**/node_modules/**/.cache/**,**/.cache/**,**/cache/**,**/*.tar,**/*.zip,**/*.gz' --input ${{ env.IMAGE_NAME }}.tar
+          trivy image --format table --skip-files '**/.npm/**,**/node_modules/**/.cache/**,**/.cache/**,**/cache/**,**/*.tar,**/*.zip,**/*.gz' --input ${{ env.IMAGE_NAME }}.tar
 
       - name: Upload Trivy scan results
         uses: actions/upload-artifact@v4
@@ -120,8 +120,8 @@ jobs:
 
       - name: Run Trivy vulnerability scanner on API
         run: |
-          trivy image --format json --output trivy-api-report.json --input ${{ env.API_IMAGE_NAME }}:latest
-          trivy image --format table --input ${{ env.API_IMAGE_NAME }}:latest
+          trivy image --format json --output trivy-api-report.json --input ${{ env.API_IMAGE_NAME }}.tar
+          trivy image --format table --input ${{ env.API_IMAGE_NAME }}.tar
 
       - name: Upload Trivy API scan results
         uses: actions/upload-artifact@v4
